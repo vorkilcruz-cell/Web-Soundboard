@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🎹 Keyboard Soundboard Studio</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      width: 100%;
+      font-family: 'JetBrains Mono', monospace;
+      color: #30004C;
+      background: linear-gradient(to right, #4facfe 0%, #00f2fe 30%, #ea60da 70%, #fec5e4 100%);
+      background-attachment: fixed;
+      background-size: cover;
+    }
+
+    .content-box {
+      width: 90%;
+      max-width: 1200px;
+      margin: 50px auto 100px auto;
+      background-color: rgba(0, 0, 0, 0.2);
+      padding: 40px 60px;
+      border-radius: 12px;
+      text-align: center;
+      backdrop-filter: blur(5px);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+    button {
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      padding: 10px 20px;
+      margin: 8px;
+      border-radius: 8px;
+      font-family: inherit;
+      color: #30004C;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: 0.3s;
+      font-size: 1rem;
+    }
+
+    button:hover { background-color: rgba(255, 255, 255, 0.3); transform: scale(1.05); }
+    button:active { transform: scale(0.95); }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 10px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.3);
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    td { padding: 10px; }
+
+    .tab-bar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .tab-bar button.active {
+      background-color: rgba(255, 255, 255, 0.4);
+      font-weight: bold;
+    }
+
+    footer {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(6px);
+      text-align: center;
+      padding: 10px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: #30004C;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    footer a {
+      color: #30004C;
+      font-weight: bold;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+
+    footer a:hover { color: #6a0dad; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="content-box">
+    <h1>🎹 Keyboard Soundboard Studio</h1>
+
+    <div class="tab-bar" id="tabBar"></div>
+
+    <div>
+      <button id="addTabBtn">➕ Add Tab</button>
+      <button id="duplicateTabBtn">📑 Duplicate Tab</button>
+      <button id="deleteTabBtn">🗑️ Delete Tab</button>
+      <input type="file" id="fileInput" multiple accept=".mp3" style="display:none">
+      <button id="importBtn">📂 Import MP3 Folder</button>
+    </div>
+
+    <table id="soundTable">
+      <thead>
+        <tr><th>SFX</th><th>BGM</th><th>SONGS</th></tr>
+      </thead>
+      <tbody id="soundBody"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    <p>Made by <a href="https://docs.google.com/document/d/1J90dJD-9PVh05fYJxY0Ruvib6PsoFCcG9hwM6KvtTUk/edit?usp=sharing" target="_blank">Nathaniel Brian Cruz</a></p>
+  </footer>
+
+  <script>
+    let soundTabs = JSON.parse(localStorage.getItem("soundTabs")) || {};
+    let currentTab = localStorage.getItem("currentTab") || "Filipino";
+    let currentAudio = null;
+
+    const tabBar = document.getElementById('tabBar');
+    const soundBody = document.getElementById('soundBody');
+    const fileInput = document.getElementById('fileInput');
+
+    const builtInSounds = [
+      { file: "BodyFall.mp3", name: "Body Fall", type: 1, key: "a" },
+      { file: "Close.mp3", name: "Close", type: 1, key: "s" },
+      { file: "OpenDoor.mp3", name: "Door Open", type: 1, key: "d" },
+      { file: "SFX_MULTIPLE.mp3", name: "SFX_MULTIPLE", type: 1, key: "f" },
+      { file: "SFX_(7)_Mga_Putok_Ng_Baril.mp3", name: "Mga Putok Ng Baril", type: 1, key: "g" },
+      { file: "SFX_(6)_Pagbukas_ng_Pinto.mp3", name: "Pagbukas ng Pinto", type: 1, key: "h" },
+      { file: "(Removed)", name: "(Removed)", type: 1, key: "" },
+      { file: "OneShot.mp3", name: "One Shot", type: 1, key: "k" },
+      { file: "test.mp3", name: "Once We Get Up There (BGM Test)", type: 2, key: "q" },
+      { file: "Threat.mp3", name: "Threatening Music", type: 2, key: "w" },
+      { file: "Drama.mp3", name: "Dramatic Music", type: 2, key: "e" },
+      { file: "Drama2.mp3", name: "Dramatic Music 2", type: 2, key: "r" },
+      { file: "Emotional.mp3", name: "Emotional Music", type: 2, key: "t" },
+      { file: "Chill.mp3", name: "Chill Music", type: 2, key: "y" },
+      { file: "Liwanag.mp3", name: "Liwanag sa Dilim - Rivermaya", type: 3, key: "z" },
+      { file: "Kapangyarihan.mp3", name: "Kapangyarihan - Ben&Ben, SB19", type: 3, key: "x" }
+    ];
+
+    if (!soundTabs["Filipino"]) soundTabs["Filipino"] = builtInSounds;
+    saveData();
+    renderTabs();
+    loadTab(currentTab);
+
+    function fadeIn(audio, duration = 1000) {
+      audio.volume = 0;
+      audio.play();
+      const step = 50, increment = step / duration;
+      const fadeInterval = setInterval(() => {
+        if (audio.volume < 1) audio.volume = Math.min(1, audio.volume + increment);
+        else clearInterval(fadeInterval);
+      }, step);
+    }
+
+    function fadeOut(audio, duration = 1000) {
+      const step = 50, decrement = step / duration;
+      const fadeInterval = setInterval(() => {
+        if (audio.volume > 0) audio.volume = Math.max(0, audio.volume - decrement);
+        else {
+          clearInterval(fadeInterval);
+          audio.pause(); audio.currentTime = 0;
+        }
+      }, step);
+    }
+
+    function playSound(sound) {
+      if (sound.file === "(Removed)") return;
+      const type = sound.type;
+      const audio = sound.audio;
+
+      if (currentAudio && currentAudio === audio && !audio.paused) {
+        if (type === 2 || type === 3) fadeOut(audio);
+        else { audio.pause(); audio.currentTime = 0; }
+        currentAudio = null;
+        return;
+      }
+
+      if (currentAudio && !currentAudio.paused) {
+        if (type === 2 || type === 3) fadeOut(currentAudio);
+        else { currentAudio.pause(); currentAudio.currentTime = 0; }
+      }
+
+      currentAudio = audio;
+      if (type === 1) { audio.volume = 1; audio.play(); }
+      else if (type === 2 || type === 3) { fadeIn(audio); audio.loop = (type === 2); }
+    }
+
+    function prepareAudioObjects(tab) {
+      tab.forEach(s => {
+        if (s.file !== "(Removed)") s.audio = new Audio(s.file);
+      });
+    }
+
+    function renderTabs() {
+      tabBar.innerHTML = '';
+      for (const tabName in soundTabs) {
+        const btn = document.createElement('button');
+        btn.textContent = tabName;
+        if (tabName === currentTab) btn.classList.add('active');
+        btn.addEventListener('click', () => {
+          currentTab = tabName;
+          localStorage.setItem('currentTab', currentTab);
+          renderTabs();
+          loadTab(tabName);
+        });
+        tabBar.appendChild(btn);
+      }
+    }
+
+    function loadTab(tabName) {
+      soundBody.innerHTML = '';
+      const tab = soundTabs[tabName];
+      prepareAudioObjects(tab);
+      const sfx = tab.filter(x => x.type === 1);
+      const bgm = tab.filter(x => x.type === 2);
+      const songs = tab.filter(x => x.type === 3);
+      const max = Math.max(sfx.length, bgm.length, songs.length);
+      for (let i = 0; i < max; i++) {
+        const row = document.createElement('tr');
+        [sfx[i], bgm[i], songs[i]].forEach(sound => {
+          const cell = document.createElement('td');
+          if (sound) {
+            const btn = document.createElement('button');
+            btn.textContent = sound.key ? `${sound.name} (${sound.key.toUpperCase()})` : `${sound.name}`;
+            btn.addEventListener('click', () => playSound(sound));
+            cell.appendChild(btn);
+          }
+          row.appendChild(cell);
+        });
+        soundBody.appendChild(row);
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      const key = e.key.toLowerCase();
+      const tab = soundTabs[currentTab];
+      const sound = tab.find(s => s.key === key);
+      if (sound) playSound(sound);
+    });
+
+    document.getElementById('addTabBtn').addEventListener('click', () => {
+      const name = prompt("Enter new tab name:");
+      if (name && !soundTabs[name]) {
+        soundTabs[name] = [];
+        currentTab = name;
+        saveData(); renderTabs(); loadTab(name);
+      }
+    });
+
+    document.getElementById('duplicateTabBtn').addEventListener('click', () => {
+      const name = prompt("Enter name for duplicated tab:");
+      if (name && !soundTabs[name]) {
+        soundTabs[name] = JSON.parse(JSON.stringify(soundTabs[currentTab]));
+        currentTab = name;
+        saveData(); renderTabs(); loadTab(name);
+      }
+    });
+
+    document.getElementById('deleteTabBtn').addEventListener('click', () => {
+      if (currentTab === "Filipino") return alert("You cannot delete the built-in tab!");
+      if (confirm(`Delete tab "${currentTab}"?`)) {
+        delete soundTabs[currentTab];
+        currentTab = "Filipino";
+        saveData();
+        renderTabs();
+        loadTab(currentTab);
+      }
+    });
+
+    document.getElementById('importBtn').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      const type = parseInt(prompt("Add to which category?\n1 = SFX\n2 = BGM\n3 = SONGS"));
+      if (![1,2,3].includes(type)) return alert("Invalid type.");
+      for (const f of files) {
+        const key = prompt(`Set keybind for ${f.name}:`).toLowerCase();
+        const url = URL.createObjectURL(f);
+        soundTabs[currentTab].push({ file: url, name: f.name.replace('.mp3',''), type, key });
+      }
+      saveData(); loadTab(currentTab);
+    });
+
+    function saveData() {
+      localStorage.setItem("soundTabs", JSON.stringify(soundTabs));
+    }
+  </script>
+</body>
+</html>
